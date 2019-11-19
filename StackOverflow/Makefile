@@ -3,13 +3,14 @@ build ?= stackoverflownx
 CC		= gcc
 CPP		= g++
 
-CFLAGS		= 
+CFLAGS	= -g
 LDFLAGS = 
-ifeq "$(build)" "stackoverflow"
-	CFLAGS += -g
-else ifeq "$(build)" "stackoverflownx"
-	CFLAGS += -g
-endif
+
+#ifeq "$(build)" "stackoverflow"
+#	CFLAGS += -g
+#else ifeq "$(build)" "stackoverflownx"
+#	CFLAGS += -g
+#endif
 
 LIBS		= -lpthread
 
@@ -22,7 +23,7 @@ StackOverflowNX: StackOverflow.c
 	$(CC) -o $@  $(CFLAGS) -fno-stack-protector -D_FORTIFY_SOURCE=0 $<
 
 StackOverflowSP: StackOverflow.c
-	$(CC) -o $@  $(CFLAGS) -D_FORTIFY_SOURCE=0 $<
+	$(CC) -o $@  $(CFLAGS) $<
 
 clean:
 	rm -rf ./*.o

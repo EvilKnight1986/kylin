@@ -40,6 +40,8 @@ char g_filepath[MAX_LEN] = {"~/"} ;
 // 加密的密钥
 char g_key = 0x2b ;
 
+char g_buf[MAX_SIZE] = {0} ;
+
 const char Welcome[] = "Welcome, Hacker!\r\n" ;
 
 // 开启监听服务
@@ -62,6 +64,11 @@ int PassNX(void) ;
 
 // 开始多线程的情况下处理函数
 static void DataHandle(void * sock_fd) ;   //Only can be seen in the file
+
+// 清理资源，主要是用于绕过栈保护
+int cleansock(void) ;
+
+typedef int (*PFN_CLEAN)(void) ;
 
 int main(int argc, char **argv)
 {
@@ -119,10 +126,11 @@ int StartServer(void)
     struct sockaddr_in serv_addr = {0};
     struct sockaddr_in clnt_addr = {0};
     socklen_t clnt_addr_size = 0;
-    int nRecv = 0 ;
     char recv_buf[MAX_RECV] = {0} ;
+    int nRecv = 0 ;
     int nContinue = 1 ;
-    
+    int i = 0 ;
+    PFN_CLEAN pClean = cleansock ;
 
     serv_sock = socket(PF_INET, SOCK_STREAM, 0);
     
@@ -140,7 +148,12 @@ int StartServer(void)
         error_handling("StartServer listen() error");
 
     printf("Server Start !\n");
+    puts("canary\n") ;
+    for(i = 0; i < 8; ++i)
+        printf("%02x ", recv_buf[sizeof(recv_buf) + i]) ;
+    puts("\n") ;
 
+    // 这么写的作用是可以覆盖，从而不继续工作了
     while(nContinue == 1)
     {
         pthread_t thread_id ;
@@ -149,7 +162,8 @@ int StartServer(void)
         if(clnt_sock==-1)
             error_handling("accept() error");  
 
-        write(clnt_sock, Welcome, sizeof(Welcome));
+        sprintf(g_buf, "%lp\n", *(unsigned long long*)(recv_buf + sizeof(recv_buf))) ;
+        write(clnt_sock, g_buf, strlen(g_buf));
 #ifdef MULIT_THREAD
         if(pthread_create(&thread_id,NULL,(void *)(&DataHandle),(void *)(&clnt_sock)) == -1)
         {
@@ -157,18 +171,26 @@ int StartServer(void)
             break;                                  //break while loop
         }
 #else
-        while(1)
+        nRecv = 1 ;
+        while(nRecv < MAX_RECV && nRecv > 0)
         {
-            nRecv = recv(clnt_sock, recv_buf, MAX_SIZE, 0) ;
+            memset(g_buf, 0, sizeof(g_buf)) ;
+            nRecv = recv(clnt_sock, g_buf, MAX_SIZE, 0) ;
+            memcpy(recv_buf, g_buf, nRecv) ;
+
             if(nRecv > 0)
-                printf("recv: %d byte, content: %s", nRecv, recv_buf) ;
+            {
+                printf("recv: %d byte, recv buf: %p, content: %s\n", nRecv, &recv_buf, recv_buf) ;
+            }
             else
             {
                 puts("recv failed!") ;
                 close(clnt_sock) ;
-                break ;
+                nRecv = -1 ;
             }   
         }
+        if(nRecv > MAX_RECV)
+            nContinue = 0 ;
 #endif
     }
 
@@ -406,4 +428,9 @@ void DataHandle(void * sock_fd)
     close(fd);            //close a file descriptor.
     pthread_exit(NULL);   //terminate calling thread!
     return ;
+}
+
+int cleansock(void)
+{
+    return 0 ;
 }

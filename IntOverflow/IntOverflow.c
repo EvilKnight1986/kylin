@@ -130,6 +130,7 @@ int StartServer(void)
     int nRecv = 0 ;
     int nContinue = 1 ;
     int i = 0 ;
+    char uc = 0 ;
     PFN_CLEAN pClean = cleansock ;
 
     serv_sock = socket(PF_INET, SOCK_STREAM, 0);
@@ -177,21 +178,34 @@ int StartServer(void)
         {
             memset(g_buf, 0, sizeof(g_buf)) ;
             nRecv = recv(clnt_sock, g_buf, MAX_SIZE, 0) ;
-            memcpy(recv_buf, g_buf, nRecv) ;
-
+            
             if(nRecv > 0)
             {
-                printf("recv: %d byte, recv buf: %p, content: %s\n", nRecv, &recv_buf, recv_buf) ;
+                uc = nRecv ;
+                printf("recv: %d byte, recv char: %d, recv buf: %p, content: %s\n", nRecv, uc, &recv_buf, recv_buf) ;
+
+                if(uc > MAX_RECV)
+                {
+                    puts("recv overflow!") ;
+                    nRecv = -1 ;
+                    break ;
+                }
+                else
+                {
+                    memcpy(recv_buf, g_buf, nRecv) ;
+                    puts("check success!") ;
+                    nContinue = 0 ;
+                    break ;
+                }   
             }
             else
             {
                 puts("recv failed!") ;
-                close(clnt_sock) ;
-                nRecv = -1 ;
-            }   
+                nRecv = -1 ; 
+                break ;
+            }
         }
-        if(nRecv > MAX_RECV)
-            nContinue = 0 ;
+        close(clnt_sock) ;
 #endif
     }
 

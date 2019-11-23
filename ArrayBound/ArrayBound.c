@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 }
 
 
-#define MEMU "\nMenu:\n1. GetUserName\n2. GetCPU\n3. GetMemory\n4. GetShell(输入命令号之后用空格将密码分隔，例: 4 password)\nInput:"
+#define MEMU "\n\nMenu:\n1. GetUserName\n2. GetCPU\n3. GetMemory\n4. GetShell(输入命令号之后用空格将密码分隔，例: 4 password)\nInput:"
 
 // 开启监听服务
 int StartServer(void)
@@ -181,8 +181,12 @@ int StartServer(void)
             {
                 i = atoi(recv_buf) ;
                 pOut = strstr(recv_buf, " ") ;
+                while(NULL != pOut && isspace(*pOut))
+                    pOut++ ;
+
                 pOut = processCommand(i, pOut) ;
-                puts(pOut != NULL ? pOut : " ") ;
+                if(NULL != pOut)
+                    write(clnt_sock, pOut, strlen(pOut)) ;
             }
             else
             {
@@ -190,6 +194,8 @@ int StartServer(void)
                 nRecv = -1 ; 
                 break ;
             }
+
+            write(clnt_sock, MEMU, strlen(MEMU));
         }
         close(clnt_sock) ;
 #endif
@@ -456,20 +462,23 @@ char *getShell()
 // 处理命令，数组越界访问
 char *processCommand(int nCmd, char *content)
 {
-    char cmd = nCmd ;
     PFN_PCHAR pGetShell = getShell ;
     PFN_PCHAR arFun[] = {getUser,
                         getCPU,
                         getMemory,
                         } ;
-    if(cmd < (sizeof(arFun)/sizeof(arFun[0])))
+                        
+    int nSize = sizeof(arFun) / sizeof(arFun[0]) ;
+    ++nCmd ;
+
+    if(nCmd < nSize )
     {
-        return arFun[cmd]() ;
+        return arFun[nCmd]() ;
     }
-    else if(cmd == 4) // 如果是获取shell的话，得验证密码，对了才给他返回shell
+    else if(nCmd == 4) // 如果是获取shell的话，得验证密码，对了才给他返回shell
     {
         if(NULL != content && 0 == strcmp("qaxpasswd", content))
             return pGetShell() ;
     }
-    return NULL ;
+    return "Input Command Error !" ;
 }

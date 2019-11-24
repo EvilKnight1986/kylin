@@ -10,17 +10,6 @@
 #include <netdb.h>
 #include <pthread.h>
 
-#define branch_CodeBegin			do {
-#define branch_CodeEnd				} while( 0 );
-#define region_begin				{
-#define region_end				}
-
-#define trAssert_return( cond, retval )		branch_CodeBegin if( !( cond ) ) return ( retval ); branch_CodeEnd
-#define trAssert_nonret( cond )			branch_CodeBegin if( !( cond ) ) return ; branch_CodeEnd
-#define trAssert_break( cond )			{ if( !( cond ) ) break; }
-#define trAssert_continue( cond )		{ if( !( cond ) ) continue; }
-#define trAssert( cond )			branch_CodeBegin if( !( cond ) ) return -1; branch_CodeEnd
-
 void error_handling(char *message) { fputs(message, stderr); fputc('\n', stderr); exit(1);}
 
 #define MAX_RECV (16)
